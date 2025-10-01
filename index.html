@@ -1,18 +1,103 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Verifikasi Foto dengan Hash (SHA-256)</title>
+  <title>🔒 Verifikasi Foto dengan Hash (SHA-256)</title>
   <style>
-    body { font-family: sans-serif; margin: 2em; background: #f5f5f5; }
-    h1 { color: #333; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); max-width: 700px; }
-    input[type="file"], input[type="text"] { margin: 1em 0; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
-    #hashGenerated, #hashProvided { font-family: monospace; background: #eee; padding: 10px; border-radius: 8px; word-wrap: break-word; }
-    .result { font-weight: bold; font-size: 1.2em; margin-top: 1em; }
-    img { max-width: 200px; margin-top: 1em; border-radius: 8px; }
-    .match { color: green; }
-    .mismatch { color: red; }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      max-width: 700px;
+      width: 100%;
+      animation: fadeIn 0.6s ease-in-out;
+    }
+    h1 { 
+      color: #2c3e50; 
+      text-align: center; 
+      margin-bottom: 20px;
+    }
+    h2 { 
+      color: #34495e; 
+      margin-top: 1.5em; 
+      font-size: 1.2em;
+    }
+    input[type="file"], input[type="text"] {
+      margin: 1em 0;
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      transition: border 0.3s;
+      font-size: 1em;
+    }
+    input[type="file"]:hover, input[type="text"]:focus {
+      border-color: #2980b9;
+      outline: none;
+    }
+    #hashGenerated, #hashProvided {
+      font-family: monospace;
+      background: #f0f0f0;
+      padding: 12px;
+      border-radius: 8px;
+      word-wrap: break-word;
+      min-height: 20px;
+    }
+    .result {
+      font-weight: bold;
+      font-size: 1.3em;
+      margin-top: 1.2em;
+      text-align: center;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .match {
+      color: white;
+      background: #27ae60;
+    }
+    .mismatch {
+      color: white;
+      background: #c0392b;
+    }
+    .neutral {
+      background: #bdc3c7;
+      color: white;
+    }
+    img {
+      max-width: 200px;
+      margin-top: 1em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      display: block;
+    }
+    .dropzone {
+      border: 2px dashed #2980b9;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: #2980b9;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    .dropzone.dragover {
+      background: #eaf6ff;
+      transform: scale(1.02);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -20,7 +105,8 @@
     <h1>🔒 Verifikasi Foto dengan Hash (SHA-256)</h1>
     
     <h2>Upload Foto</h2>
-    <input type="file" id="fileInput" accept="image/*">
+    <div class="dropzone" id="dropzone">📂 Drop file di sini atau klik untuk pilih</div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
     <p><strong>Hash dari Foto:</strong></p>
     <p id="hashGenerated">Belum ada file</p>
     <div id="preview"></div>
@@ -30,7 +116,7 @@
     <p><strong>Hash Pemilik:</strong></p>
     <p id="hashProvided">Belum ada input</p>
 
-    <div class="result" id="result">⚪ Belum dibandingkan</div>
+    <div class="result neutral" id="result">⚪ Belum dibandingkan</div>
   </div>
 
   <script>
@@ -44,32 +130,50 @@
     let generatedHash = "";
     let providedHash = "";
 
-    // handle foto upload
-    document.getElementById("fileInput").addEventListener("change", async (event) => {
-      const file = event.target.files[0];
+    function handleFile(file) {
       if (!file) return;
-
-      // preview foto
       const reader = new FileReader();
       reader.onload = e => {
         document.getElementById("preview").innerHTML = `<img src="${e.target.result}" alt="preview">`;
       };
       reader.readAsDataURL(file);
 
-      // buat hash
-      generatedHash = await fileToSHA256(file);
-      document.getElementById("hashGenerated").innerText = generatedHash;
-      checkMatch();
+      fileToSHA256(file).then(hash => {
+        generatedHash = hash;
+        document.getElementById("hashGenerated").innerText = generatedHash;
+        checkMatch();
+      });
+    }
+
+    document.getElementById("fileInput").addEventListener("change", (e) => {
+      handleFile(e.target.files[0]);
     });
 
-    // handle hash input manual
+    // drag & drop
+    const dropzone = document.getElementById("dropzone");
+    dropzone.addEventListener("click", () => document.getElementById("fileInput").click());
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragover");
+    });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    // input hash pemilik
     document.getElementById("hashInput").addEventListener("input", (event) => {
       providedHash = event.target.value.trim().toLowerCase();
       document.getElementById("hashProvided").innerText = providedHash || "Belum ada input";
       checkMatch();
     });
 
-    // cek apakah sama
     function checkMatch() {
       const result = document.getElementById("result");
       if (generatedHash && providedHash) {
@@ -80,6 +184,9 @@
           result.innerHTML = "❌ Foto tidak valid: hash berbeda";
           result.className = "result mismatch";
         }
+      } else {
+        result.innerHTML = "⚪ Belum dibandingkan";
+        result.className = "result neutral";
       }
     }
   </script>
